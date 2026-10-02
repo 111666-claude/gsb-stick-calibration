@@ -26,5 +26,26 @@ class BasicTest(unittest.TestCase):
         self.assertEqual(stick.center, (0.0, 0.0))
 
 
+class DeviceTest(unittest.TestCase):
+    def test_add_device_registers(self):
+        stick = Stick()
+        stick.add_device("pad1")
+        self.assertIn("pad1", stick.devices)
+
+    def test_device_center_without_samples_is_zero(self):
+        self.assertEqual(Stick().device_center("pad1"), (0.0, 0.0))
+
+    def test_sample_returns_true(self):
+        stick = Stick()
+        stick.add_device("pad1")
+        self.assertTrue(stick.sample("pad1", 0.1, 0.1))
+
+    def test_switches_of_default_starts_at_zero(self):
+        self.assertEqual(Stick().switches_of(), 0)
+
+    def test_work_starts_at_zero(self):
+        self.assertEqual(Stick().work_count(), 0)
+
+
 if __name__ == "__main__":
     unittest.main()

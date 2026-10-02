@@ -9,7 +9,7 @@ from .core import Stick
 def build_parser():
     parser = argparse.ArgumentParser(prog="stick-calibration", description="摇杆处理")
     parser.add_argument("--sample", default="radial",
-                        help="radial / curve / drift / hysteresis / clamp")
+                        help="radial / curve / drift / hysteresis / clamp / devices / mix / work")
     return parser
 
 
@@ -34,8 +34,30 @@ def main(argv=None):
         print("switches=%d" % stick.switches)
     elif args.sample == "clamp":
         print("len=%.3f" % length(Stick().process(1.5, 0.0)))
+    elif args.sample == "devices":
+        stick = Stick()
+        stick.add_device("pad1")
+        stick.add_device("pad2")
+        stick.process(0.45, 0.0, device="pad1")
+        stick.process(0.1, 0.0, device="pad2")
+        print("pad1=%d pad2=%d" % (stick.switches_of("pad1"), stick.switches_of("pad2")))
+    elif args.sample == "mix":
+        stick = Stick()
+        stick.add_device("pad1")
+        stick.add_device("pad2")
+        for _ in range(2):
+            stick.sample("pad1", 0.4, 0.0)
+        for _ in range(2):
+            stick.sample("pad2", 0.8, 0.0)
+        print("center=%.3f" % stick.device_center("pad1")[0])
+    elif args.sample == "work":
+        stick = Stick()
+        stick.add_device("pad1")
+        for index in range(5000):
+            stick.sample("pad1", (index % 100) / 100.0, 0.0)
+        print("work=%d" % stick.work_count())
     else:
-        raise SystemExit("需要 --sample radial|curve|drift|hysteresis|clamp")
+        raise SystemExit("需要 --sample radial|curve|drift|hysteresis|clamp|devices|mix|work")
     return 0
 
 

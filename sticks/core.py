@@ -1,7 +1,7 @@
-"""摇杆处理：中心偏移校准、径向死区、响应曲线、死区滞回与输出钳制。
+"""摇杆处理：多设备校准台账、径向死区、响应曲线、死区滞回与输出钳制。
 
-缺陷：死区按每轴独立判断、曲线用乘法顶替幂、校准结果不参与运算、
-滞回不生效、输出不钳制。
+缺陷：死区按每轴判、曲线用乘法顶替幂、校准偏移不参与运算、滞回不生效、
+输出不钳制、所有设备共用一份中心与状态、采样混在一起且每次重扫全部样本。
 """
 
 import math
@@ -17,18 +17,41 @@ class Stick:
         self.center = (0.0, 0.0)
         self.active = False
         self.switches = 0
+        self.devices = {}
+        self.samples = []
+        self.work = 0
 
-    def calibrate(self, samples):
-        """用静止采样求中心偏移。"""
+    def add_device(self, name):
+        """登记一个设备。"""
+        self.devices[name] = True
+        return True
+
+    def calibrate(self, samples, device="default"):
+        """用一批采样设置中心偏移。"""
         if not samples:
             self.center = (0.0, 0.0)
             return self.center
         count = len(samples)
-        self.center = (sum(s[0] for s in samples) / count,
-                       sum(s[1] for s in samples) / count)
+        self.center = (sum(item[0] for item in samples) / count,
+                       sum(item[1] for item in samples) / count)
         return self.center
 
-    def process(self, x, y):
+    def sample(self, device, x, y):
+        """记录一个静止采样。"""
+        self.work += len(self.samples)
+        self.samples.append((device, x, y))
+        return True
+
+    def device_center(self, device):
+        """某个设备当前的中心偏移。"""
+        self.work += len(self.samples)
+        if not self.samples:
+            return (0.0, 0.0)
+        count = len(self.samples)
+        return (sum(item[1] for item in self.samples) / count,
+                sum(item[2] for item in self.samples) / count)
+
+    def process(self, x, y, device="default"):
         """处理一帧摇杆输入。"""
         magnitude = max(abs(x), abs(y))
         if magnitude > self.deadzone and not self.active:
@@ -45,3 +68,10 @@ class Stick:
         radius = (abs(value) - self.deadzone) / (1 - self.deadzone)
         radius = radius * self.exponent
         return math.copysign(radius, value)
+
+    def switches_of(self, device="default"):
+        """某个设备的累计状态切换次数。"""
+        return self.switches
+
+    def work_count(self):
+        return self.work
